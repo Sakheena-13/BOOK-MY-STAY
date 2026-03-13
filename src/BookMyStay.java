@@ -1,96 +1,89 @@
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
- * UseCase8BookingHistoryReport demonstrates historical tracking and reporting.
- * It uses a List to provide operational visibility into confirmed bookings.
- *
- * @version 8.0
+ * UC9: Custom Exception for Domain-specific errors.
+ */
+class InvalidBookingException extends Exception {
+    public InvalidBookingException(String message) {
+        super(message);
+    }
+}
+
+/**
+ * UC9: Room Validator and Inventory Guard.
+ */
+class BookingValidator {
+    private Map<String, Integer> inventory = new HashMap<>();
+
+    public void addInventory(String type, int count) {
+        inventory.put(type, count);
+    }
+
+    /**
+     * Validates both input and system state before allowing a booking.
+     * Demonstrates Fail-Fast Design.
+     */
+    public void validateRequest(String guest, String type) throws InvalidBookingException {
+        // 1. Validate Input (Input Validation)
+        if (guest == null || guest.trim().isEmpty()) {
+            throw new InvalidBookingException("Validation Failed: Guest name cannot be empty.");
+        }
+
+        // 2. Validate Room Type (Guarding System State)
+        if (!inventory.containsKey(type)) {
+            throw new InvalidBookingException("Validation Failed: Room type '" + type + "' does not exist.");
+        }
+
+        // 3. Validate Availability (Preventing Negative State)
+        if (inventory.get(type) <= 0) {
+            throw new InvalidBookingException("Validation Failed: No availability for '" + type + "'.");
+        }
+
+        System.out.println("Validation Passed for: " + guest);
+    }
+}
+
+/**
+ * Main class to demonstrate Graceful Failure Handling.
+ * @version 9.0
  */
 public class BookMyStay {
-
-    /**
-     * Represents a confirmed booking record.
-     */
-    static class ConfirmedBooking {
-        private String reservationId;
-        private String guestName;
-        private String roomType;
-        private double totalCost;
-
-        public ConfirmedBooking(String id, String name, String type, double cost) {
-            this.reservationId = id;
-            this.guestName = name;
-            this.roomType = type;
-            this.totalCost = cost;
-        }
-
-        @Override
-        public String toString() {
-            return String.format("ID: %-6s | Guest: %-10s | Room: %-12s | Cost: $%.2f",
-                    reservationId, guestName, roomType, totalCost);
-        }
-    }
-
-    /**
-     * BookingHistory maintains the long-lived record of all confirmed bookings.
-     */
-    static class BookingHistory {
-        private List<ConfirmedBooking> records = new ArrayList<>();
-
-        public void addRecord(ConfirmedBooking booking) {
-            records.add(booking);
-        }
-
-        public List<ConfirmedBooking> getAllRecords() {
-            // Returns a copy to ensure reporting doesn't modify stored data
-            return new ArrayList<>(records);
-        }
-    }
-
-    /**
-     * BookingReportService generates summaries from the history data.
-     */
-    static class BookingReportService {
-        public void generateSummaryReport(BookingHistory history) {
-            List<ConfirmedBooking> data = history.getAllRecords();
-            double totalRevenue = 0;
-
-            System.out.println("--- Administrative Booking Report ---");
-            if (data.isEmpty()) {
-                System.out.println("No records found.");
-                return;
-            }
-
-            for (ConfirmedBooking b : data) {
-                System.out.println(b);
-                totalRevenue += b.totalCost;
-            }
-
-            System.out.println("-------------------------------------");
-            System.out.println("Total Bookings: " + data.size());
-            System.out.printf("Total Revenue:  $%.2f%n", totalRevenue);
-            System.out.println("-------------------------------------");
-        }
-    }
-
     public static void main(String[] args) {
-        System.out.println("Book My Stay - System v8.0");
-        System.out.println("Goal: Historical Tracking & Operational Reporting\n");
+        System.out.println("Book My Stay - System v9.0");
+        System.out.println("Goal: Error Handling & State Validation\n");
 
-        // 1. Initialize History and Reporting Service
-        BookingHistory history = new BookingHistory();
-        BookingReportService reportService = new BookingReportService();
+        BookingValidator validator = new BookingValidator();
+        validator.addInventory("Single", 1); // Only 1 room available
 
-        // 2. Simulate successful confirmations being added to history
-        // (In a real app, these come from the Allocation Service in UC6)
-        history.addRecord(new ConfirmedBooking("R-101", "Alice", "Suite Room", 420.0));
-        history.addRecord(new ConfirmedBooking("R-102", "Bob", "Single Room", 100.0));
-        history.addRecord(new ConfirmedBooking("R-103", "Diana", "Single Room", 120.0));
+        // Array of test cases including valid and invalid inputs
+        String[][] testRequests = {
+                {"Alice", "Single"},      // Valid
+                {"", "Single"},           // Invalid: Empty Name
+                {"Bob", "Penthouse"},     // Invalid: Non-existent Room
+                {"Charlie", "Single"}     // Invalid: Out of Stock (Fail-Fast)
+        };
 
-        // 3. Admin requests a report
-        reportService.generateSummaryReport(history);
+        for (String[] req : testRequests) {
+            try {
+                String guest = req[0];
+                String type = req[1];
 
-        System.out.println("\nAudit trail complete. Data is preserved for administrative review.");
+                validator.validateRequest(guest, type);
+
+                // If validation passes, simulate the booking
+                System.out.println("SUCCESS: Processed booking for " + guest + "\n");
+
+                // Update state after success
+                validator.addInventory(type, 0);
+
+            } catch (InvalidBookingException e) {
+                // Graceful Failure Handling
+                System.err.println("ERROR: " + e.getMessage());
+                System.err.println("System status: Stable. Continuing to next request...\n");
+            }
+        }
+
+        System.out.println("All requests processed. System remains in a consistent state.");
     }
 }
