@@ -1,22 +1,22 @@
-import java.util.LinkedList;
-import java.util.Queue;
+import java.util.*;
 
 /**
- * UC5: Fair request handling using Queue.
+ * UC6: Final allocation with Set for unique IDs.
  */
-class RequestV5 {
-    String guest;
-    String type;
-    public RequestV5(String g, String t) { this.guest = g; this.type = t; }
-}
-
 public class BookMyStay {
     public static void main(String[] args) {
-        Queue<RequestV5> queue = new LinkedList<>();
-        queue.add(new RequestV5("Alice", "Single"));
-        queue.add(new RequestV5("Bob", "Suite"));
+        Set<String> allocatedIds = new HashSet<>();
+        Map<String, Integer> inventory = new HashMap<>();
+        inventory.put("Single", 1);
 
-        System.out.println("Requests in Queue: " + queue.size());
-        System.out.println("First in line: " + queue.peek().guest);
+        String guest = "Alice";
+        String type = "Single";
+
+        if (inventory.get(type) > 0) {
+            String id = "R101";
+            allocatedIds.add(id); // Set prevents double-booking
+            inventory.put(type, inventory.get(type) - 1); // Atomic update
+            System.out.println("Confirmed: " + guest + " assigned to " + id);
+        }
     }
 }
