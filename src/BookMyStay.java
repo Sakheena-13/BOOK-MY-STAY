@@ -1,91 +1,83 @@
+import java.io.*;
 import java.util.*;
 
 /**
- * UC11: Concurrent Booking Simulation.
- * Demonstrates Thread Safety and Synchronized Access to shared resources.
- *
- * @version 11.0
+ * UC12: Data Persistence & System Recovery.
+ * Demonstrates Serialization and Deserialization to maintain state across restarts.
  */
 public class BookMyStay {
 
+    // The file where our "Database" will be stored
+    private static final String STORAGE_FILE = "hotel_state.ser";
+
     /**
-     * Shared Resource: Inventory.
-     * Methods are 'synchronized' to prevent Race Conditions.
+     * Represents the entire System State to be saved.
+     * Must implement Serializable to be written to a file.
      */
-    static class ThreadSafeInventory {
-        private int availableRooms = 2; // Only 2 rooms for multiple guests
+    static class HotelState implements Serializable {
+        private static final long serialVersionUID = 1L;
+        Map<String, Integer> inventory = new HashMap<>();
+        List<String> bookingHistory = new ArrayList<>();
 
-        // Critical Section: Only one thread can check and decrement at a time
-        public synchronized boolean bookRoom(String guestName) {
-            if (availableRooms > 0) {
-                System.out.println("[THREAD: " + Thread.currentThread().getName() +
-                        "] Processing for: " + guestName);
+        public void display() {
+            System.out.println("--- Restored System State ---");
+            System.out.println("Inventory: " + inventory);
+            System.out.println("History Count: " + bookingHistory.size());
+            for(String record : bookingHistory) System.out.println(" - " + record);
+            System.out.println("-----------------------------");
+        }
+    }
 
-                // Simulate processing delay to increase chance of a race condition
-                try { Thread.sleep(100); } catch (InterruptedException e) {}
-
-                availableRooms--;
-                System.out.println("CONFIRMED: " + guestName + " got a room. Left: " + availableRooms);
-                return true;
-            } else {
-                System.out.println("FAILED: No rooms left for " + guestName);
-                return false;
+    /**
+     * Persistence Service to handle File I/O operations.
+     */
+    static class PersistenceService {
+        public void saveState(HotelState state) {
+            try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(STORAGE_FILE))) {
+                oos.writeObject(state);
+                System.out.println("SUCCESS: System state serialized to " + STORAGE_FILE);
+            } catch (IOException e) {
+                System.err.println("ERROR: Failed to save state: " + e.getMessage());
             }
         }
 
-        public int getRemaining() { return availableRooms; }
-    }
+        public HotelState loadState() {
+            File file = new File(STORAGE_FILE);
+            if (!file.exists()) {
+                System.out.println("No persistence file found. Starting with fresh state.");
+                return new HotelState();
+            }
 
-    /**
-     * Represents a Guest acting as an independent Thread.
-     */
-    static class GuestRequest implements Runnable {
-        private String guestName;
-        private ThreadSafeInventory inventory;
-
-        public GuestRequest(String name, ThreadSafeInventory inv) {
-            this.guestName = name;
-            this.inventory = inv;
-        }
-
-        @Override
-        public void run() {
-            inventory.bookRoom(guestName);
+            try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(STORAGE_FILE))) {
+                System.out.println("RECOVERY: Loading state from " + STORAGE_FILE + "...");
+                return (HotelState) ois.readObject();
+            } catch (Exception e) {
+                System.err.println("ERROR: Corrupted state file. Starting fresh. " + e.getMessage());
+                return new HotelState();
+            }
         }
     }
 
-    public static void main(String[] args) throws InterruptedException {
-        System.out.println("Book My Stay - System v11.0");
-        System.out.println("Goal: Thread Safety & Concurrent Booking Simulation\n");
+    public static void main(String[] args) {
+        System.out.println("Book My Stay - System v12.0");
+        System.out.println("Goal: Persistence & System Recovery\n");
 
-        ThreadSafeInventory sharedInventory = new ThreadSafeInventory();
+        PersistenceService persistence = new PersistenceService();
 
-        // 1. Create multiple guest threads attempting to book simultaneously
-        Thread t1 = new Thread(new GuestRequest("Alice", sharedInventory), "Thread-Alice");
-        Thread t2 = new Thread(new GuestRequest("Bob", sharedInventory), "Thread-Bob");
-        Thread t3 = new Thread(new GuestRequest("Charlie", sharedInventory), "Thread-Charlie");
-        Thread t4 = new Thread(new GuestRequest("Diana", sharedInventory), "Thread-Diana");
+        // 1. SYSTEM STARTUP (Recovery Phase)
+        HotelState currentState = persistence.loadState();
+        currentState.display();
 
-        // 2. Start all threads at roughly the same time (Concurrent Execution)
-        System.out.println("Starting concurrent booking requests...");
-        t1.start();
-        t2.start();
-        t3.start();
-        t4.start();
+        // 2. SYSTEM OPERATION (Simulation)
+        System.out.println("\nSimulating a new booking...");
+        String newGuest = "Guest_" + System.currentTimeMillis() % 1000;
+        currentState.inventory.put("Single", currentState.inventory.getOrDefault("Single", 10) - 1);
+        currentState.bookingHistory.add("Guest: " + newGuest + " | Room: Single");
 
-        // 3. Wait for all threads to finish
-        t1.join();
-        t2.join();
-        t3.join();
-        t4.join();
+        // 3. SYSTEM SHUTDOWN (Persistence Phase)
+        System.out.println("Preparing for shutdown...");
+        persistence.saveState(currentState);
 
-        // 4. Final Consistency Check
-        System.out.println("\nFinal System State:");
-        System.out.println("Remaining Rooms: " + sharedInventory.getRemaining());
-        if (sharedInventory.getRemaining() < 0) {
-            System.err.println("CRITICAL ERROR: Oversold inventory (Race Condition occurred)!");
-        } else {
-            System.out.println("SUCCESS: System state is consistent.");
-        }
+        System.out.println("\nApplication Terminated. RUN AGAIN to see the recovered state!");
     }
 }
