@@ -2,18 +2,22 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * UC3: Replacing variables with HashMap.
+ * UC4: Read-only search logic.
  */
-class RoomInventoryV3 {
-    private Map<String, Integer> inventory = new HashMap<>();
-    public void setStock(String type, int count) { inventory.put(type, count); }
-    public int getStock(String type) { return inventory.getOrDefault(type, 0); }
+class SearchServiceV4 {
+    public void search(Map<String, Integer> inv) {
+        System.out.println("--- Available Rooms ---");
+        inv.forEach((type, count) -> {
+            if (count > 0) System.out.println(type + ": " + count + " available");
+        });
+    }
 }
 
 public class BookMyStay {
     public static void main(String[] args) {
-        RoomInventoryV3 inv = new RoomInventoryV3();
-        inv.setStock("Single", 10);
-        System.out.println("Inventory Initialized. Single Rooms: " + inv.getStock("Single"));
+        Map<String, Integer> inventory = new HashMap<>();
+        inventory.put("Single", 5);
+        inventory.put("Suite", 0); // Should be filtered out
+        new SearchServiceV4().search(inventory);
     }
 }
