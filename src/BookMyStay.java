@@ -1,24 +1,19 @@
-/**
- * UC2: Object modeling using inheritance.
- */
-abstract class RoomV2 {
-    private String type;
-    private double price;
-    public RoomV2(String type, double price) { this.type = type; this.price = price; }
-    public String getType() { return type; }
-    public double getPrice() { return price; }
-    public abstract String getFeatures();
-}
+import java.util.HashMap;
+import java.util.Map;
 
-class SingleRoomV2 extends RoomV2 {
-    public SingleRoomV2() { super("Single", 100.0); }
-    @Override public String getFeatures() { return "1 Bed"; }
+/**
+ * UC3: Replacing variables with HashMap.
+ */
+class RoomInventoryV3 {
+    private Map<String, Integer> inventory = new HashMap<>();
+    public void setStock(String type, int count) { inventory.put(type, count); }
+    public int getStock(String type) { return inventory.getOrDefault(type, 0); }
 }
 
 public class BookMyStay {
     public static void main(String[] args) {
-        RoomV2 single = new SingleRoomV2();
-        int singleAvailable = 5; // Static availability variable
-        System.out.println("Room: " + single.getType() + " | Price: $" + single.getPrice() + " | Left: " + singleAvailable);
+        RoomInventoryV3 inv = new RoomInventoryV3();
+        inv.setStock("Single", 10);
+        System.out.println("Inventory Initialized. Single Rooms: " + inv.getStock("Single"));
     }
 }
