@@ -1,23 +1,24 @@
 /**
- * The BookMyStay class serves as the entry point for the
- * Hotel Booking Management System.
- *
- * @author YourName
- * @version 1.0
+ * UC2: Object modeling using inheritance.
  */
+abstract class RoomV2 {
+    private String type;
+    private double price;
+    public RoomV2(String type, double price) { this.type = type; this.price = price; }
+    public String getType() { return type; }
+    public double getPrice() { return price; }
+    public abstract String getFeatures();
+}
+
+class SingleRoomV2 extends RoomV2 {
+    public SingleRoomV2() { super("Single", 100.0); }
+    @Override public String getFeatures() { return "1 Bed"; }
+}
+
 public class BookMyStay {
-
-    /**
-     * The main method is the starting point of the application.
-     *
-     * @param args Command-line arguments
-     */
     public static void main(String[] args) {
-        // Welcome message along with the application name and version
-        System.out.println("Welcome to Book My Stay!");
-        System.out.println("Application Name: Hotel Booking Management System");
-        System.out.println("Version: 1.0");
-
-        // Application terminates after execution
+        RoomV2 single = new SingleRoomV2();
+        int singleAvailable = 5; // Static availability variable
+        System.out.println("Room: " + single.getType() + " | Price: $" + single.getPrice() + " | Left: " + singleAvailable);
     }
 }
